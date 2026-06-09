@@ -22,6 +22,13 @@ import (
 func (f *RootModulesFeature) discover(ctx context.Context, path string, files []string) (job.IDs, error) {
 	ids := make(job.IDs, 0)
 
+	// The walker is expected to provide a context, but guard against a nil
+	// parent so enqueuing jobs (which derives an OpenTelemetry span from it)
+	// can never panic the server if a publisher omits it.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	rawUri := uri.FromPath(path)
 	if uri, ok := datadir.ModuleUriFromDataDir(rawUri); ok {
 		f.logger.Printf("discovered root module in %s", uri)
