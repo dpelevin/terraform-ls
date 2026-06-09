@@ -5,6 +5,7 @@ package rootmodules
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -158,6 +159,49 @@ func TestRootModulesFeature_discover_datadir(t *testing.T) {
 
 	dir := document.DirHandleFromPath(dirPath)
 	assertIndexChainScheduled(t, ss, dir, ids)
+}
+
+// TestRootModulesFeature_notifyProviderSchemaChange verifies the Defer hook
+// attached to the ObtainSchema job: it publishes a ProviderSchemaChangeEvent
+// when the schema was obtained successfully (jobErr == nil) and stays silent
+// when the job failed or short-circuited (jobErr != nil).
+func TestRootModulesFeature_notifyProviderSchemaChange(t *testing.T) {
+	feature, _ := newTestFeature(t)
+
+	// Subscribe with a nil done channel so Publish does not block waiting for
+	// a consumer.
+	events := feature.eventbus.OnProviderSchemaChange("test", nil)
+
+	dir := document.DirHandleFromPath(t.TempDir())
+	deferFunc := feature.notifyProviderSchemaChange(dir)
+
+	// No publish when the ObtainSchema job returned an error.
+	ids, err := deferFunc(context.Background(), errors.New("obtain schema failed"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 0 {
+		t.Fatalf("expected no spawned jobs on job error, got %d", len(ids))
+	}
+	select {
+	case e := <-events:
+		t.Fatalf("unexpected ProviderSchemaChange published on job error: %v", e)
+	default:
+	}
+
+	// Publish when the schema was obtained successfully.
+	_, err = deferFunc(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case e := <-events:
+		if e.Dir != dir {
+			t.Fatalf("expected event for %q, got %q", dir.Path(), e.Dir.Path())
+		}
+	default:
+		t.Fatal("expected ProviderSchemaChange event to be published on success")
+	}
 }
 
 func assertIndexChainScheduled(t *testing.T, ss *globalState.StateStore, dir document.DirHandle, ids job.IDs) {

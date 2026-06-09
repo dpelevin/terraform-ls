@@ -75,6 +75,28 @@ func (f *SearchFeature) didChange(ctx context.Context, dir document.DirHandle) (
 	return f.decodeSearch(ctx, dir, true, true)
 }
 
+// providerSchemaChange re-decodes an open module when new provider schemas
+// have been obtained for it, invalidating the cache (IgnoreState: true) so the
+// reference graph is rebuilt against the late schema.
+func (f *SearchFeature) providerSchemaChange(ctx context.Context, dir document.DirHandle) (job.IDs, error) {
+	ids := make(job.IDs, 0)
+
+	hasSearchRecord := f.store.Exists(dir.Path())
+	if !hasSearchRecord {
+		return ids, nil
+	}
+
+	hasOpenDocs, err := f.stateStore.DocumentStore.HasOpenDocuments(dir)
+	if err != nil {
+		f.logger.Printf("error when checking for open documents in %q (provider schema change): %s", dir.Path(), err)
+	}
+	if !hasOpenDocs {
+		return ids, nil
+	}
+
+	return f.decodeSearch(ctx, dir, true, true)
+}
+
 func (f *SearchFeature) didChangeWatched(ctx context.Context, rawPath string, changeType protocol.FileChangeType, isDir bool) (job.IDs, error) {
 	ids := make(job.IDs, 0)
 

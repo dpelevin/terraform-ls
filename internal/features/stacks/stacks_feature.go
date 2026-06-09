@@ -67,10 +67,13 @@ func (f *StacksFeature) Start(ctx context.Context) {
 	didChangeDone := make(chan job.IDs, 10)
 	didChangeWatchedDone := make(chan job.IDs, 10)
 
+	providerSchemaChangeDone := make(chan job.IDs, 10)
+
 	discover := f.bus.OnDiscover(topic, nil)
 	didOpen := f.bus.OnDidOpen(topic, didOpenDone)
 	didChange := f.bus.OnDidChange(topic, didChangeDone)
 	didChangeWatched := f.bus.OnDidChangeWatched(topic, didChangeWatchedDone)
+	providerSchemaChange := f.bus.OnProviderSchemaChange(topic, providerSchemaChangeDone)
 
 	go func() {
 		for {
@@ -90,6 +93,10 @@ func (f *StacksFeature) Start(ctx context.Context) {
 				// TODO? collect errors
 				spawnedIds, _ := f.didChangeWatched(didChangeWatched.Context, didChangeWatched.RawPath, didChangeWatched.ChangeType, didChangeWatched.IsDir)
 				didChangeWatchedDone <- spawnedIds
+			case providerSchemaChange := <-providerSchemaChange:
+				// TODO? collect errors
+				spawnedIds, _ := f.providerSchemaChange(providerSchemaChange.Context, providerSchemaChange.Dir)
+				providerSchemaChangeDone <- spawnedIds
 
 			case <-ctx.Done():
 				return

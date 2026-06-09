@@ -85,6 +85,9 @@ func (f *ModulesFeature) Start(ctx context.Context) {
 	didChangeWatchedDone := make(chan job.IDs, 10)
 	didChangeWatched := f.eventbus.OnDidChangeWatched("feature.modules", didChangeWatchedDone)
 
+	providerSchemaChangeDone := make(chan job.IDs, 10)
+	providerSchemaChange := f.eventbus.OnProviderSchemaChange("feature.modules", providerSchemaChangeDone)
+
 	go func() {
 		for {
 			select {
@@ -104,6 +107,10 @@ func (f *ModulesFeature) Start(ctx context.Context) {
 				// TODO? collect errors
 				spawnedIds, _ := f.didChangeWatched(didChangeWatched.Context, didChangeWatched.RawPath, didChangeWatched.ChangeType, didChangeWatched.IsDir)
 				didChangeWatchedDone <- spawnedIds
+			case providerSchemaChange := <-providerSchemaChange:
+				// TODO? collect errors
+				spawnedIds, _ := f.providerSchemaChange(providerSchemaChange.Context, providerSchemaChange.Dir)
+				providerSchemaChangeDone <- spawnedIds
 
 			case <-ctx.Done():
 				return

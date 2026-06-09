@@ -28,19 +28,21 @@ type EventBus struct {
 	didChangeWatchedTopic *Topic[DidChangeWatchedEvent]
 	discoverTopic         *Topic[DiscoverEvent]
 
-	manifestChangeTopic   *Topic[ManifestChangeEvent]
-	pluginLockChangeTopic *Topic[PluginLockChangeEvent]
+	manifestChangeTopic       *Topic[ManifestChangeEvent]
+	pluginLockChangeTopic     *Topic[PluginLockChangeEvent]
+	providerSchemaChangeTopic *Topic[ProviderSchemaChangeEvent]
 }
 
 func NewEventBus() *EventBus {
 	return &EventBus{
-		logger:                discardLogger,
-		didOpenTopic:          NewTopic[DidOpenEvent](),
-		didChangeTopic:        NewTopic[DidChangeEvent](),
-		didChangeWatchedTopic: NewTopic[DidChangeWatchedEvent](),
-		discoverTopic:         NewTopic[DiscoverEvent](),
-		manifestChangeTopic:   NewTopic[ManifestChangeEvent](),
-		pluginLockChangeTopic: NewTopic[PluginLockChangeEvent](),
+		logger:                    discardLogger,
+		didOpenTopic:              NewTopic[DidOpenEvent](),
+		didChangeTopic:            NewTopic[DidChangeEvent](),
+		didChangeWatchedTopic:     NewTopic[DidChangeWatchedEvent](),
+		discoverTopic:             NewTopic[DiscoverEvent](),
+		manifestChangeTopic:       NewTopic[ManifestChangeEvent](),
+		pluginLockChangeTopic:     NewTopic[PluginLockChangeEvent](),
+		providerSchemaChangeTopic: NewTopic[ProviderSchemaChangeEvent](),
 	}
 }
 

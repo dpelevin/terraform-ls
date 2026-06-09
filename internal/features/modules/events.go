@@ -76,6 +76,29 @@ func (f *ModulesFeature) didChange(ctx context.Context, dir document.DirHandle) 
 	return f.decodeModule(ctx, dir, true, true)
 }
 
+// providerSchemaChange re-decodes an open module when new provider schemas
+// have been obtained for it. The decode jobs invalidate their cache
+// (IgnoreState: true) so the reference graph is rebuilt against the new schema
+// even though the module content itself has not changed.
+func (f *ModulesFeature) providerSchemaChange(ctx context.Context, dir document.DirHandle) (job.IDs, error) {
+	ids := make(job.IDs, 0)
+
+	hasModuleRecord := f.Store.Exists(dir.Path())
+	if !hasModuleRecord {
+		return ids, nil
+	}
+
+	hasOpenDocs, err := f.stateStore.DocumentStore.HasOpenDocuments(dir)
+	if err != nil {
+		f.logger.Printf("error when checking for open documents in %q (provider schema change): %s", dir.Path(), err)
+	}
+	if !hasOpenDocs {
+		return ids, nil
+	}
+
+	return f.decodeModule(ctx, dir, true, true)
+}
+
 func (f *ModulesFeature) didChangeWatched(ctx context.Context, rawPath string, changeType protocol.FileChangeType, isDir bool) (job.IDs, error) {
 	ids := make(job.IDs, 0)
 

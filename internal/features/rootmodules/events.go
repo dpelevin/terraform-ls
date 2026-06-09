@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/terraform-ls/internal/document"
+	"github.com/hashicorp/terraform-ls/internal/eventbus"
 	"github.com/hashicorp/terraform-ls/internal/features/rootmodules/ast"
 	"github.com/hashicorp/terraform-ls/internal/features/rootmodules/jobs"
 	"github.com/hashicorp/terraform-ls/internal/job"
@@ -159,6 +160,7 @@ func (f *RootModulesFeature) indexRootModule(ctx context.Context, dir document.D
 		},
 		Type:      op.OpTypeObtainSchema.String(),
 		DependsOn: job.IDs{pSchemaVerId},
+		Defer:     f.notifyProviderSchemaChange(dir),
 	})
 	if err != nil {
 		return ids, err
@@ -166,6 +168,27 @@ func (f *RootModulesFeature) indexRootModule(ctx context.Context, dir document.D
 	ids = append(ids, pSchemaId)
 
 	return ids, nil
+}
+
+// notifyProviderSchemaChange returns a job.DeferFunc to attach to an
+// ObtainSchema job. When the job obtained new schemas (jobErr == nil), it
+// publishes a ProviderSchemaChangeEvent so that features which decode against
+// provider schemas can re-decode any open modules. When the job
+// short-circuited because the schema was already known
+// (job.StateNotChangedErr) or failed, nothing is published.
+func (f *RootModulesFeature) notifyProviderSchemaChange(dir document.DirHandle) job.DeferFunc {
+	return func(ctx context.Context, jobErr error) (job.IDs, error) {
+		if jobErr != nil {
+			return nil, nil
+		}
+
+		spawnedIds := f.eventbus.ProviderSchemaChange(eventbus.ProviderSchemaChangeEvent{
+			Context: ctx,
+			Dir:     dir,
+		})
+
+		return spawnedIds, nil
+	}
 }
 
 func (f *RootModulesFeature) pluginLockChange(ctx context.Context, dir document.DirHandle) (job.IDs, error) {
@@ -200,6 +223,7 @@ func (f *RootModulesFeature) pluginLockChange(ctx context.Context, dir document.
 		IgnoreState: true,
 		Type:        op.OpTypeObtainSchema.String(),
 		DependsOn:   job.IDs{pSchemaVerId},
+		Defer:       f.notifyProviderSchemaChange(dir),
 	})
 	if err != nil {
 		return ids, err
