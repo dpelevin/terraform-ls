@@ -9,6 +9,7 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/hashicorp/terraform-ls/internal/document"
+	"github.com/hashicorp/terraform-ls/internal/features/modules/jobs"
 	"github.com/hashicorp/terraform-ls/internal/job"
 	"github.com/hashicorp/terraform-ls/internal/langserver/cmd"
 	"github.com/hashicorp/terraform-ls/internal/langserver/progress"
@@ -26,6 +27,10 @@ func (h *CmdHandler) TerraformValidateHandler(ctx context.Context, args cmd.Comm
 		return nil, fmt.Errorf("URI %q is not valid", dirUri)
 	}
 
+	if h.ModulesFeature == nil {
+		return nil, fmt.Errorf("modules feature is not available")
+	}
+
 	dirHandle := document.DirHandleFromURI(dirUri)
 
 	progress.Begin(ctx, "Validating")
@@ -37,7 +42,7 @@ func (h *CmdHandler) TerraformValidateHandler(ctx context.Context, args cmd.Comm
 	id, err := h.StateStore.JobStore.EnqueueJob(ctx, job.Job{
 		Dir: dirHandle,
 		Func: func(ctx context.Context) error {
-			return nil //module.TerraformValidate(ctx, h.StateStore.Modules, dirHandle.Path())
+			return jobs.TerraformValidate(ctx, h.ModulesFeature.Store, dirHandle.Path())
 		},
 		Type:        op.OpTypeTerraformValidate.String(),
 		IgnoreState: true,

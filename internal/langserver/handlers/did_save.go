@@ -26,6 +26,11 @@ func (svc *service) TextDocumentDidSave(ctx context.Context, params lsp.DidSaveT
 
 	cmdHandler := &command.CmdHandler{
 		StateStore: svc.stateStore,
+		Logger:     svc.logger,
+	}
+	if svc.features != nil {
+		cmdHandler.ModulesFeature = svc.features.Modules
+		cmdHandler.RootModulesFeature = svc.features.RootModules
 	}
 	_, err = cmdHandler.TerraformValidateHandler(ctx, cmd.CommandArgs{
 		"uri": dh.Dir.URI,
