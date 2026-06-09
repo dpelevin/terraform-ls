@@ -86,8 +86,8 @@ func (f *RootModulesFeature) Start(ctx context.Context) {
 			select {
 			case discover := <-discover:
 				// TODO? collect errors
-				f.discover(discover.Path, discover.Files)
-				discoverDone <- job.IDs{}
+				spawnedIds, _ := f.discover(discover.Context, discover.Path, discover.Files)
+				discoverDone <- spawnedIds
 			case didOpen := <-didOpen:
 				// TODO? collect errors
 				spawnedIds, _ := f.didOpen(didOpen.Context, didOpen.Dir)

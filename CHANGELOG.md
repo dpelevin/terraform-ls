@@ -1,3 +1,9 @@
+## Unreleased
+
+BUG FIXES:
+
+* Schedule provider schema loading (`terraform providers schema -json`) from root module discovery when the directory already has open documents. This fixes a race on large multi-root workspaces where `didOpen` arrived before the walker registered the root module, leaving the third-party provider schema unloaded and breaking hover / go-to-definition until a lockfile change or re-open.
+
 ## 0.38.7 (27 May 2026)
 
 ENHANCEMENTS:
